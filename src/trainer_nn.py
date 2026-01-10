@@ -18,13 +18,13 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 
 
 def train_neural_network():
-    # 1. Load Data
+    # Load Data
     if not os.path.exists(DATA_FILE):
         print("Error: No data found. Run data_fetcher.py first.")
         return
     df = pd.read_csv(DATA_FILE)
 
-    # 2. Define Features and Target
+    # Define Features and Target
     features = [
         "ROLLING_FPTS",
         "ROLLING_MIN",
@@ -32,13 +32,17 @@ def train_neural_network():
         "VS_OPP_AVG",
         "STAR_OUT",
         "IS_STARTER",
+        "IS_HOME",
+        "DAYS_REST",
+        "IS_B2B",
+        "GAME_PACE",
     ]
     df = df.dropna(subset=features + ["TARGET_FPTS"])
 
     X = df[features].values
     y = df["TARGET_FPTS"].values
 
-    # 3. Split and Scale (Mandatory for NNs)
+    # Split and Scale (Mandatory for NNs)
     # Fit only on training data to prevent "Data Leakage"
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, shuffle=False
@@ -48,7 +52,7 @@ def train_neural_network():
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    # 4. Build Architecture (Multi-Layer Perceptron)
+    # Build Architecture (Multi-Layer Perceptron)
     model = Sequential(
         [
             # Input Layer + Hidden Layer 1: 64 neurons with ReLU
@@ -63,14 +67,14 @@ def train_neural_network():
         ]
     )
 
-    # 5. Compile Model
+    # Compile Model
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
         loss="mse",  # Mean Squared Error: standard for regression
         metrics=["mae"],  # Mean Absolute Error
     )
 
-    # 6. Train the Model
+    # Train the Model
     print("Training Neural Network...")
     history = model.fit(
         X_train_scaled,
@@ -81,7 +85,7 @@ def train_neural_network():
         verbose=1,
     )
 
-    # 7. Evaluate Performance
+    # Evaluate Performance
     predictions = model.predict(X_test_scaled).flatten()
     r2 = r2_score(y_test, predictions)
 
@@ -90,7 +94,7 @@ def train_neural_network():
     print(f"R^2 Score: {r2:.4f}")
     print("-" * 30)
 
-    # 8. Save the Model and Scaler
+    # Save the Model and Scaler
     # We must save the scaler so the predictor uses the same normalization
     model.save(MODEL_PATH)
     joblib.dump(scaler, SCALER_PATH)

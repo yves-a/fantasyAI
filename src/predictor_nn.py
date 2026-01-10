@@ -47,17 +47,36 @@ def get_live_player_stats(player_name):
         if len(df) < 5:
             return None
 
-        # Calculate FPTS for each of the last 5 games
+        # 1. Convert dates and sort to ensure rest calculation is correct
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
+        df = df.sort_values("GAME_DATE", ascending=True)
+
+        # 2. Calculate FPTS
         df["FPTS"] = df.apply(calculate_custom_fpts, axis=1)
+
+        # 3. Engineer New Features for the latest game (index -1)
+        latest_game = df.iloc[-1]
+        prev_game = df.iloc[-2]
+
+        # Location: 'vs.' means home, '@' means away
+        is_home = 1 if "vs." in latest_game["MATCHUP"] else 0
+
+        # Fatigue: Difference between this game and the one before
+        days_rest = (latest_game["GAME_DATE"] - prev_game["GAME_DATE"]).days
+        is_b2b = 1 if days_rest == 1 else 0
 
         # Build feature dictionary
         return {
-            "ROLLING_FPTS": df["FPTS"].head(5).mean(),
-            "ROLLING_MIN": df["MIN"].head(5).mean(),
-            "OPP_DEF_RATING": 115.0,  # Proxy: League average
-            "VS_OPP_AVG": df["FPTS"].mean(),  # Proxy: Season average
-            "STAR_OUT": 0,  # Proxy: 0
-            "IS_STARTER": 1,  # Proxy: 1
+            "ROLLING_FPTS": df["FPTS"].tail(5).mean(),
+            "ROLLING_MIN": df["MIN"].tail(5).mean(),
+            "OPP_DEF_RATING": 115.0,  # Proxy
+            "VS_OPP_AVG": df["FPTS"].mean(),
+            "STAR_OUT": 0,
+            "IS_STARTER": 1,
+            "IS_HOME": is_home,
+            "DAYS_REST": days_rest,
+            "IS_B2B": is_b2b,
+            "GAME_PACE": 100.0,  # Proxy (since pace requires a team-wide API call)
         }
     except Exception as e:
         print(f"API Error: {e}")
@@ -80,6 +99,10 @@ def predict_any_player_nn(name):
         "VS_OPP_AVG",
         "STAR_OUT",
         "IS_STARTER",
+        "IS_HOME",
+        "DAYS_REST",
+        "IS_B2B",
+        "GAME_PACE",
     ]
 
     # 3. Check Local Data
