@@ -145,7 +145,7 @@ def process_and_feature_engineer(file_path):
     # Final Cleanup
     df.drop(columns=["GAME_USG", "DATE_KEY"], inplace=True, errors="ignore")
     df.to_csv(file_path, index=False)
-    print(f"✅ CLEANUP COMPLETE. Processed {len(df)} rows.")
+    print(f"CLEANUP COMPLETE. Processed {len(df)} rows.")
 
 
 if __name__ == "__main__":
